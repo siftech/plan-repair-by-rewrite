@@ -1,0 +1,45 @@
+(define
+    (problem toll-problem)
+    (:domain  toll-domain)
+  (:objects
+   a - location
+   b - location
+   c - location
+   d - location
+   e - location
+   f - location
+   g - location
+   h - location
+   i - location
+   )
+  (:htn
+   :parameters ()
+   :ordered-subtasks (and
+                      (move a h)
+                      )
+   )
+  (:init
+   (at a)
+   (road a c) (road c a)
+   (road b c) (road c b)
+   (road c g) (road g c)
+   (road c d) (road d c)
+   (road c e) (road e c)
+   (road d e) (road e d)
+   (road d f) (road f d)
+   (road e g) (road g e)
+   (road e f) (road f e)
+   (road g i) (road i g)
+   (road g f) (road f g)
+   (road f h) (road h f)
+   (pay-location a)
+   (pay-location b)
+   (pay-location i)
+   (pay-location h)
+   (toll-area c)
+   (toll-area d)
+   (toll-area e)
+   (toll-area f)
+   (toll-area g)
+   )
+  )

@@ -1,0 +1,93 @@
+(define (domain toll-domain)
+    (:requirements :negative-preconditions :typing :hierarchy)
+  (:types
+   location - object
+   )
+  (:predicates
+   (toll-area ?r - region)
+   (road ?arg0 - location ?arg1 - location)
+   (at ?arg1 - location)
+   (pay-location ?l - location)
+   )
+
+  (:task move
+   :parameters (?l1 - location ?l2 - location)
+         )
+
+  (:method move-one
+      :parameters (?l1 - location ?l2 - location)
+    :task (move ?l1 ?l2)
+    :ordered-subtasks (and
+                       (drive ?l1 ?l2)
+                       )
+    )
+  (:method move-more
+      :parameters (?l1 ?l2 ?l3 - location)
+    :task (move ?l1 ?l3)
+    :ordered-subtasks (and
+                       (drive ?l1 ?l2)
+                       (move ?l2 ?l3)
+                       )
+    )
+  (:method move-none
+      :parameters (?l1 - location)
+    :task (move ?l1 ?l1)
+    :ordered-subtasks ()
+    )
+  (:method move-one-ta
+      :parameters (?l1 - location ?l2 - location)
+    :task (move ?l1 ?l2)
+    :ordered-subtasks (and
+                       (drive-ta ?l1 ?l2)
+                       (pay-toll ?l2)
+                       )
+    )
+  (:method move-more-ta
+      :parameters (?l1 ?l2 ?l3 - location)
+    :task (move ?l1 ?l3)
+    :ordered-subtasks (and
+                       (drive-ta ?l1 ?l2)
+                       (move ?l2 ?l3)
+                       (pay-toll ?l3)
+                       )
+    )
+
+  (:action drive
+   :parameters (?l1 - location ?l2 - location)
+   :precondition 
+           (and
+            (at ?l1)
+            (not (toll-area ?l1))
+            (road ?l1 ?l2)
+            )
+   :effect
+           (and
+            (not (at ?l1))
+            (at ?l2)
+            )
+           )
+  (:action drive-ta
+   :parameters (?l1 - location ?l2 - location)
+   :precondition 
+           (and
+            (at ?l1)
+            (toll-area ?l1)
+            (road ?l1 ?l2)
+            )
+   :effect
+           (and
+            (not (at ?l1))
+            (at ?l2)
+            )
+           )
+
+  (:action pay-toll
+   :parameters (?l - location)
+   :precondition 
+           (and
+            (at ?l)
+            (pay-location ?l)
+            )
+   :effect ()
+           )
+  )
