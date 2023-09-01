@@ -1,0 +1,17 @@
+pandaPIparser is configured as follows
+  Colors in output: true
+  Mode: convert pandaPI plan
+==>
+1 drive A C
+3 drive-ta C G
+4 drive-ta G F
+15 drive-ta F H
+16 pay-toll H
+17 pay-toll H
+18 pay-toll H
+root 22
+14 move F H -> move-more-ta 15 21 16
+19 move C H -> move-more-ta 3 23 18
+21 move H H -> move-none
+22 move A H -> move-more 1 19
+23 move G H -> move-more-ta 4 14 17
