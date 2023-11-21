@@ -54,16 +54,16 @@ It will be an ALIST of (integer . ground task expression)*"
 ;;; prefix. We denote these facts by li with 0 ≤ i ≤ m and li ̸∈ L and
 ;;; define the new set of propositional state features as
 ;;; L′ = L ∪ {li |0≤i≤m}.
-(defgeneric ordering-literals (info)
+(defgeneric ordering-literals (info &key package)
   (:documentation "Return the set of ordering literal names for INFO.")
-  (:method ((er execution-record))
-    (ordering-literals (executed-actions er)))
-  (:method (acts)
+  (:method ((er execution-record) &key (package :hddl))
+    (ordering-literals (executed-actions er) :package package))
+  (:method (acts &key (package :hddl))
     (iter (with sym-name = "L")
       ;; there is one extra ordering literal -- the one for before the first action.
       (for i from 0 to (length acts))
       (collecting
-          (intern (format nil "~a-~d" sym-name i) :hddl)))))
+          (intern (format nil "~a-~d" sym-name i) package)))))
 
 
 
@@ -73,7 +73,7 @@ It will be an ALIST of (integer . ground task expression)*"
 ;;; prec(ai) ∪ {li−1}, add′(a′i) 7→ add(ai) ∪ {li} and del′(a′i) 7→
 ;;; del(ai) ∪ {li−1}.
 (declaim (ftype (function (t execution-record)
-                          (values list t &optional))
+                          (values t t t &optional))
                 new-actions))
 (defun new-actions (ordering-literal-list exec-record)
   (let ((hddl-utils:*pddl-package* hddl-io:*hddl-package*))
@@ -119,7 +119,7 @@ to get the correct sequencing."
                              (error "Can't find previous definition of action ~s in domain named ~s"
                                     action-name (hddl-utils:domain-name (domain exec-record)))))
     (declare (type integer index) (type list action old-action-def) (type symbol action-name new-action-name))
-    (collecting (make-new-action new-action-name old-action-def
+    (collecting (make-new-action action new-action-name old-action-def
                  ordering-literal next-ordering-literal
                  :last-p (null next-act)
                  :er exec-record)
@@ -208,14 +208,15 @@ action.
                                        (,next-ordering-literal)))
                              bindings))))
 
-(defun make-new-action (new-action-name old-action ordering-literal next-ordering-literal
+(defun make-new-action (executed-task new-action-name old-action ordering-literal next-ordering-literal
                         &key last-p er)
   (when last-p
     (unless er (error "Need to supply an execution record with the last action spec.")))
   (hddl-utils:make-action new-action-name
                           (copy-tree (hddl-utils:action-params old-action))
                           :precondition
-                          `(and ,(copy-tree (hddl-utils:action-precondition old-action))
+                          `(and ,@(prim-bindings old-action executed-task),
+                                (copy-tree (hddl-utils:action-precondition old-action))
                                 (,ordering-literal))
                           :effect
                           (if last-p
@@ -223,6 +224,16 @@ action.
                               `(and ,(copy-tree (hddl-utils:action-effect old-action))
                                     (not (,ordering-literal))
                                     (,next-ordering-literal)))))
+
+(defun prim-bindings (primitive-def executed-task)
+  "Return a set of equality literals that enforce that the ACTION whose definition is PRIMITIVE-DEF
+will be executed with the same arguments as EXECUTED-TASK by checking that the parameters of
+PRIMITIVE-DEF are bound to the same values as before."
+  (let ((params (hddl-utils:remove-types-from-list (hddl-utils:action-params primitive-def)))
+        (bindings (rest executed-task)))
+    (iter (for param in params)
+      (as binding in bindings)
+      (collecting `(= ,param ,binding)))))
 
 (defun new-act-revised-effects (old-action ordering-literal next-ordering-literal er)
   ;; The last action in the executed prefix am needs to have additional
