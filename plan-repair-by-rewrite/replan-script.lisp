@@ -48,6 +48,7 @@
         (hddl-io:pprint-hddl *new-domain* str)))))
 
 
+#+nil
 (defun plan-repair ()
   (let ((*default-pathname-defaults* (uiop:ensure-absolute-pathname
                                       (asdf:system-relative-pathname "plan-repair-rewrite"

@@ -1,0 +1,8 @@
+((!drive A C)
+ (!drive-ta C G)
+ (!drive-ta G F)
+ (!drive-ta F H)
+ (!pay-toll H)
+ (!pay-toll H)
+ (!pay-toll H)
+ )
