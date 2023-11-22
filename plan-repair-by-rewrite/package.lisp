@@ -9,7 +9,8 @@
 
   (:export #:execution-record
            #:repair-domain
-           #:repair-problem)
+           #:repair-problem
+           #:repair-domain-and-problem)
 
   (:import-from #:alexandria
                 #:when-let
