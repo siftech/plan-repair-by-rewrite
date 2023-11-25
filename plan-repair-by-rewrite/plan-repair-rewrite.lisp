@@ -157,32 +157,34 @@ action.
          (new-task (hddl-utils::make-complex-task new-task-name
                                                   (hddl-utils:action-params new-action-def)))
          (new-name (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl))
-         (new-method-replay (hddl-utils::make-ordered-method
-                      new-name
-                      ;; task-sexpr
-                      `(,new-task-name
-                        ,@(hddl-utils:remove-types-from-list
-                           (hddl-utils::task-parameters new-task)))
-                      ;; params
-                      (hddl-utils::task-parameters new-task)
-                      ;; task-network
-                      :tasks
-                      `((,(hddl-utils:action-name new-action-def)
-                         ,@(hddl-utils:remove-types-from-list
-                            (hddl-utils::task-parameters new-task))))))
-         (new-method-new (hddl-utils::make-ordered-method
-                      (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl)
-                      ;; task-sexpr
-                      `(,new-task-name
-                        ,@(hddl-utils:remove-types-from-list
-                           (hddl-utils::task-parameters new-task)))
-                      ;; params
-                      (hddl-utils::task-parameters new-task)
-                      ;; task-network
-                      :tasks
-                      `((,old-action-name
-                         ,@(hddl-utils:remove-types-from-list
-                            (hddl-utils::task-parameters new-task)))))))
+         (new-method-replay
+           (hddl-utils::make-ordered-method
+            new-name
+            ;; task-sexpr
+            `(,new-task-name
+              ,@(hddl-utils:remove-types-from-list
+                 (hddl-utils::task-parameters new-task)))
+            ;; params
+            (hddl-utils::task-parameters new-task)
+            ;; task-network
+            :tasks
+            `((,(hddl-utils:action-name new-action-def)
+               ,@(hddl-utils:remove-types-from-list
+                  (hddl-utils::task-parameters new-task))))))
+         (new-method-new
+           (hddl-utils::make-ordered-method
+            (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl)
+            ;; task-sexpr
+            `(,new-task-name
+              ,@(hddl-utils:remove-types-from-list
+                 (hddl-utils::task-parameters new-task)))
+            ;; params
+            (hddl-utils::task-parameters new-task)
+            ;; task-network
+            :tasks
+            `((,old-action-name
+               ,@(hddl-utils:remove-types-from-list
+                  (hddl-utils::task-parameters new-task)))))))
     (values new-task (list new-method-replay new-method-new))))
 
 ;;; grounded version...
