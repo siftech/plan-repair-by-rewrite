@@ -17,7 +17,7 @@ rewriting."
   :serial t
   :depends-on ("iterate"
                "alexandria"
-               (:version "hddl-utils" "3")
+               (:version "hddl-utils" "3.2.2")
                "shop3/unifier")
   :components ((:file "package")
                (:file "plan-repair-rewrite")))
