@@ -245,8 +245,10 @@ PRIMITIVE-DEF are bound to the same values as before."
   (assert next-ordering-literal)        ; cannot be NIL
   (with-slots (unforeseen-pos unforeseen-neg) er
     ;; effects-conj does not include the AND -- put it back before returning.
-    (let ((effects-conj (flatten-conjunction
-                         (hddl-utils:action-effect old-action))))
+    (let ((effects-conj (if (eq (first (hddl-utils:action-effect old-action)) 'and)
+                            (flatten-conjunction
+                             (hddl-utils:action-effect old-action))
+                            (hddl-utils:action-effect old-action))))
       (iter (for x in unforeseen-pos)
         (as to-remove = `(not ,x))
         (deletef effects-conj to-remove  :test 'equalp))
