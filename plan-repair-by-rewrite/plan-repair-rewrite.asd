@@ -38,7 +38,7 @@ rewriting."
 (defsystem #:plan-repair-rewrite/shop3-test
   :author "Robert P. Goldman (SIFT, LLC)"
   :license  "BSD 3-clause"
-  :version (:read-file-form "version.lisp-expr"))
+  :version (:read-file-form "version.lisp-expr")
   :serial t
   :depends-on ("plan-repair-rewrite/shop3" "fiveam")
   :perform (test-op (op sys)

@@ -7,6 +7,8 @@
                 #:executed-actions
                 #:unforeseen-pos
                 #:unforeseen-neg)
+  (:import-from #:uiop
+                #:intern*)
   (:import-from #:shop
                 #:problem
                 #:domain

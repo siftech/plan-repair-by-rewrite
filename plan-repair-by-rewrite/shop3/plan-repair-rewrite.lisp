@@ -14,48 +14,21 @@
 (defun er-problem (execution-record)
   (prr::problem execution-record))
 
-;; (defclass execution-record ()
-;;   ((executed-actions
-;;     :initarg :executed-actions
-;;     :reader executed-actions
-;;     :documentation "Sequence of previously-executed actions.
-;; It will be an ALIST of (integer . ground task expression)*"
-;;     )
-;;    (unforeseen-pos
-;;     :initarg :unforeseen-pos
-;;     :reader unforeseen-pos
-;;     :documentation "Facts unexpectedly becoming true."
-;;     )
-;;    (unforeseen-neg
-;;     :initarg :unforeseen-neg
-;;     :reader unforeseen-neg
-;;     :documentation "Facts unexpectedly becoming false."
-;;     )
-;;    (plan
-;;     :initarg :plan
-;;     :reader plan
-;;     )
-;;    (problem
-;;     :initarg :problem
-;;     :reader problem)
-;;    (domain
-;;     :initarg :domain
-;;     :reader domain
-;;     )))
-
 (deftype only-values (&rest value-spec)
   `(values ,@value-spec &optional))
 
 (deftype only-value (value-spec)
   `(values ,value-spec &optional))
 
+#-allegro
 (declaim (ftype (function (execution-record)
-                          (values domain
-                                  problem
-                                  &optional))
+                          (only-values list
+                                       list))
                 repair-domain-and-problem))
 
 (defun repair-domain-and-problem (er)
+  "Return two s-expressions, one a SHOP domain definition, and the
+other a SHOP problem definition."
   (let* ((problem (er-problem er))
          (ordering-literals (ordering-literals er :package :shop-user))
          (repair-domain-sexp (repair-domain er ordering-literals)))
@@ -228,7 +201,7 @@ to get the correct sequencing."
   original one."
 
   (declare (type list new-action-defs old-action) (type symbol old-action-name))
-  (let* ((new-task-name (uiop:intern* (concatenate 'string "PLAY-OR-REPLAY-"
+  (let* ((new-task-name (intern* (concatenate 'string "PLAY-OR-REPLAY-"
                                                    (string-left-trim (list #\!) (string old-action-name)))
                                       (symbol-package old-action-name)))
          (new-task `(,new-task-name ,@(primitive-parameters old-action)))
@@ -384,7 +357,7 @@ the prefix of tasks has been completed -- is in the final state."
                                                                 old-action-names new-complex-tasks)
                                        (domain-items-no-primitives-or-methods (domain-items (er-domain er)))))
              (orig-domain-name (shop::domain-name (er-domain er)))
-             (new-domain-name (uiop:intern* (concatenate 'string (symbol-name orig-domain-name) "-REPAIR")
+             (new-domain-name (intern* (concatenate 'string (symbol-name orig-domain-name) "-REPAIR")
                                             (symbol-package orig-domain-name))))
         ;; need an equality axiom
         (unless (find-if #'(lambda (item) (and (eq (first item) :-) (eq (first (second item)) '=)))
