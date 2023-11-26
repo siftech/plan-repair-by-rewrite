@@ -131,84 +131,70 @@ to get the correct sequencing."
 ;;; the original plan.
 ;;; C′ =C∪{c′a |a∈A},c′a ̸∈C∪A,
 ;;; Ma = {(c′a,({t},∅,{t 7→ a})) | ∀a ∈ A}
-(defun new-action-tasks-and-methods (new-action-list old-action-names)
-  (iter (for act in new-action-list)
-    (as old-name in old-action-names)
-    (multiple-value-bind (new-task methods)
-        (new-action-task-and-methods act old-name)
-      (collecting new-task into new-tasks)
-      (appending methods into new-methods)
-      (finally (return (values new-tasks new-methods))))))
+(defun new-action-tasks-and-methods (new-action-list old-action-names all-actions)
+  (let ((alist (regroup-action-lists new-action-list old-action-names)))
+    (iter (for (old-name . new-actions) in alist)
+      (as old-action = (or
+                        (find old-name all-actions :key #'hddl-utils:action-name)
+                        (error "Couldn't find a previous action definition for action: ~s" old-name)))
+      (collecting old-name into old-names)
+      (multiple-value-bind (new-task methods)
+          (new-action-task-and-methods new-actions old-name old-action)
+        (collecting new-task into new-tasks)
+        (appending methods into new-methods)
+        (finally (return (values old-names new-tasks new-methods)))))))
 
-(defun new-action-task-and-methods (new-action-def old-action-name)
+(defun new-action-task-and-methods (new-action-defs old-action-name old-action &aux methods)
   "Takes an HDDL action definition NEW-ACTION-DEF for a replay action,
 and an OLD-ACTION-NAME (a symbol) and makes a new task and methods so that
 the new task can be expanded into either NEW-ACTION-DEF or the original
 action.
   Returns two values:
-1. New action definition and
+1. New task definition and
 2. New methods that expand to either the new action or the original one."
-  (declare (type list new-action-def) (type symbol old-action-name))
+  (declare (type list new-action-defs old-action) (type symbol old-action-name))
   (let* ((new-task-name (hddl-utils:hddl-symbol
                          (concatenate 'string
-                                      "REPLAY-"
-                                      (symbol-name
-                                       (hddl-utils:action-name new-action-def)))))
+                                      "PLAY-OR-REPLAY-"
+                                      (symbol-name old-action-name))))
          (new-task (hddl-utils::make-complex-task new-task-name
-                                                  (hddl-utils:action-params new-action-def)))
-         (new-name (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl))
-         (new-method-replay
-           (hddl-utils::make-ordered-method
-            new-name
-            ;; task-sexpr
-            `(,new-task-name
-              ,@(hddl-utils:remove-types-from-list
-                 (hddl-utils::task-parameters new-task)))
-            ;; params
-            (hddl-utils::task-parameters new-task)
-            ;; task-network
-            :tasks
-            `((,(hddl-utils:action-name new-action-def)
+                                         (hddl-utils:action-params old-action))))
+    ;; expand NEW-TASK as a new primitive action, not a replay
+    (let* ((new-name (gentemp (symbol-name old-action-name) :hddl))
+           (new-method-play (hddl-utils::make-ordered-method
+                               new-name
+                               ;; task-sexpr
+                               `(,new-task-name
+                                 ,@(hddl-utils:remove-types-from-list
+                                    (hddl-utils::task-parameters new-task)))
+                               ;; params
+                               (hddl-utils::task-parameters new-task)
+                               ;; task-network
+                               :tasks
+                               `((,old-action-name
+                                  ,@(hddl-utils:remove-types-from-list
+                                     (hddl-utils::task-parameters new-task)))))))
+      (push new-method-play methods))
+    (iter (for new-action-def in new-action-defs)
+      (as prim-name = (hddl-utils:action-name new-action-def))
+      (as new-name-replay = (gentemp (symbol-name old-action-name) :hddl))
+      (declare (type symbol prim-name new-name-replay))
+      (push (hddl-utils::make-ordered-method
+             new-name-replay
+             ;; task-sexpr
+             `(,new-task-name
                ,@(hddl-utils:remove-types-from-list
-                  (hddl-utils::task-parameters new-task))))))
-         (new-method-new
-           (hddl-utils::make-ordered-method
-            (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl)
-            ;; task-sexpr
-            `(,new-task-name
-              ,@(hddl-utils:remove-types-from-list
-                 (hddl-utils::task-parameters new-task)))
-            ;; params
-            (hddl-utils::task-parameters new-task)
-            ;; task-network
-            :tasks
-            `((,old-action-name
-               ,@(hddl-utils:remove-types-from-list
-                  (hddl-utils::task-parameters new-task)))))))
-    (values new-task (list new-method-replay new-method-new))))
-
-;;; grounded version...
-#+nil
-(defun make-new-action (ground-action new-action-name old-action ordering-literal next-ordering-literal
-                        &key last-p er)
-  (when last-p
-    (unless er (error "Need to supply an execution record with the last action spec.")))
-  (let* ((ground-task `(,new-action-name ,@ (rest ground-action)))
-         (new-act-task `(,new-action-name ,@(hddl-utils:remove-types-from-list
-                                             (hddl-utils:action-params old-action))))
-         (bindings (shop.unifier:unify new-act-task ground-task)))
-    (hddl-utils:make-action new-action-name
-                            nil
-                            (shop3.unifier:apply-substitution
-                             `(and ,(copy-tree (hddl-utils:action-precondition old-action))
-                                   (,ordering-literal))
-                             bindings)
-                            (shop3.unifier:apply-substitution
-                             (if last-p
-                                 (new-act-revised-effects old-action next-ordering-literal er)
-                                 `(and ,(copy-tree (hddl-utils:action-effect old-action))
-                                       (,next-ordering-literal)))
-                             bindings))))
+                  (hddl-utils::task-parameters new-task)))
+             ;; params
+             (hddl-utils:task-parameters new-task)
+             :precond (copy-tree (hddl-utils:action-precondition new-action-def))
+             ;; task-network
+             :tasks
+             `((,prim-name
+                ,@(hddl-utils:remove-types-from-list
+                   (hddl-utils::task-parameters new-task)))))
+            methods))
+    (values new-task methods)))
 
 (defun make-new-action (executed-task new-action-name old-action ordering-literal next-ordering-literal
                         &key last-p er)
@@ -290,8 +276,8 @@ PRIMITIVE-DEF are bound to the same values as before."
     ;; parameters
     (appendf (hddl-utils:domain-predicates new-domain)
              (mapcar #'list ordering-literals))
-    (multiple-value-bind (new-complex-tasks new-methods)
-        (new-action-tasks-and-methods new-actions old-action-names)
+    (multiple-value-bind (old-action-names new-complex-tasks new-methods)
+        (new-action-tasks-and-methods new-actions old-action-names (hddl-utils:domain-actions (domain er)))
       (appendf (hddl-utils:domain-tasks new-domain)
                new-complex-tasks)
       (setf (hddl-utils:domain-methods new-domain)
@@ -303,6 +289,7 @@ PRIMITIVE-DEF are bound to the same values as before."
 (defun revise-original-methods (methods old-action-names new-complex-tasks)
   "Return a revised set of methods based on METHODS, but with references to
 OLD-ACTION-NAMES in their subtasks replaced by references to NEW-COMPLEX-TASKS."
+  (assert (= (length old-action-names) (length new-complex-tasks)))
   (let ((new-methods (copy-tree methods))
         (new-complex-task-names (mapcar #'hddl-utils:task-name new-complex-tasks)))
     (dolist (new-method new-methods)
@@ -312,3 +299,16 @@ OLD-ACTION-NAMES in their subtasks replaced by references to NEW-COMPLEX-TASKS."
           (setf subtasks (subst new-task-name old-action-name subtasks)))
         (setf (hddl-utils:method-subtasks new-method) subtasks)))
     new-methods))
+
+;;; the NEW-ACTION-LIST contains new operator and action definitions
+;;; created to replay actions in the executed part of the plan.  The
+;;; corresponding original action names are in OLD-ACTION-NAMES.  This
+;;; function regroups these into an ALIST whose entries are of this
+;;; form:
+(defun regroup-action-lists (new-action-list old-action-names)
+  (let (alist)
+    (iter (for new-action in new-action-list)
+      (as old-name in old-action-names)
+      (push new-action (alexandria:assoc-value alist
+                                               old-name)))
+    alist))

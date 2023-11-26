@@ -178,18 +178,6 @@ to get the correct sequencing."
         (appending methods into new-methods)
         (finally (return (values old-names new-tasks new-methods)))))))
 
-;;; the NEW-ACTION-LIST contains new operator and action definitions
-;;; created to replay actions in the executed part of the plan.  The
-;;; corresponding original action names are in OLD-ACTION-NAMES.  This
-;;; function regroups these into an ALIST whose entries are of this
-;;; form:
-(defun regroup-action-lists (new-action-list old-action-names)
-  (let (alist)
-    (iter (for new-action in new-action-list)
-      (as old-name in old-action-names)
-      (push new-action (alexandria:assoc-value alist
-                                               old-name)))
-    alist))
 
 (defun new-action-task-and-methods (new-action-defs old-action-name old-action)
 

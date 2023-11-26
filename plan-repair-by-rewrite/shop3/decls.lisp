@@ -6,7 +6,8 @@
                 #:execution-record
                 #:executed-actions
                 #:unforeseen-pos
-                #:unforeseen-neg)
+                #:unforeseen-neg
+                #:regroup-action-lists)
   (:import-from #:uiop
                 #:intern*)
   (:import-from #:shop
