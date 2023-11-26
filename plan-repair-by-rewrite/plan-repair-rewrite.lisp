@@ -157,32 +157,34 @@ action.
          (new-task (hddl-utils::make-complex-task new-task-name
                                                   (hddl-utils:action-params new-action-def)))
          (new-name (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl))
-         (new-method-replay (hddl-utils::make-ordered-method
-                      new-name
-                      ;; task-sexpr
-                      `(,new-task-name
-                        ,@(hddl-utils:remove-types-from-list
-                           (hddl-utils::task-parameters new-task)))
-                      ;; params
-                      (hddl-utils::task-parameters new-task)
-                      ;; task-network
-                      :tasks
-                      `((,(hddl-utils:action-name new-action-def)
-                         ,@(hddl-utils:remove-types-from-list
-                            (hddl-utils::task-parameters new-task))))))
-         (new-method-new (hddl-utils::make-ordered-method
-                      (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl)
-                      ;; task-sexpr
-                      `(,new-task-name
-                        ,@(hddl-utils:remove-types-from-list
-                           (hddl-utils::task-parameters new-task)))
-                      ;; params
-                      (hddl-utils::task-parameters new-task)
-                      ;; task-network
-                      :tasks
-                      `((,old-action-name
-                         ,@(hddl-utils:remove-types-from-list
-                            (hddl-utils::task-parameters new-task)))))))
+         (new-method-replay
+           (hddl-utils::make-ordered-method
+            new-name
+            ;; task-sexpr
+            `(,new-task-name
+              ,@(hddl-utils:remove-types-from-list
+                 (hddl-utils::task-parameters new-task)))
+            ;; params
+            (hddl-utils::task-parameters new-task)
+            ;; task-network
+            :tasks
+            `((,(hddl-utils:action-name new-action-def)
+               ,@(hddl-utils:remove-types-from-list
+                  (hddl-utils::task-parameters new-task))))))
+         (new-method-new
+           (hddl-utils::make-ordered-method
+            (gentemp (symbol-name (hddl-utils:action-name new-action-def)) :hddl)
+            ;; task-sexpr
+            `(,new-task-name
+              ,@(hddl-utils:remove-types-from-list
+                 (hddl-utils::task-parameters new-task)))
+            ;; params
+            (hddl-utils::task-parameters new-task)
+            ;; task-network
+            :tasks
+            `((,old-action-name
+               ,@(hddl-utils:remove-types-from-list
+                  (hddl-utils::task-parameters new-task)))))))
     (values new-task (list new-method-replay new-method-new))))
 
 ;;; grounded version...
@@ -245,8 +247,10 @@ PRIMITIVE-DEF are bound to the same values as before."
   (assert next-ordering-literal)        ; cannot be NIL
   (with-slots (unforeseen-pos unforeseen-neg) er
     ;; effects-conj does not include the AND -- put it back before returning.
-    (let ((effects-conj (flatten-conjunction
-                         (hddl-utils:action-effect old-action))))
+    (let ((effects-conj (if (eq (first (hddl-utils:action-effect old-action)) 'and)
+                            (flatten-conjunction
+                             (hddl-utils:action-effect old-action))
+                            (hddl-utils:action-effect old-action))))
       (iter (for x in unforeseen-pos)
         (as to-remove = `(not ,x))
         (deletef effects-conj to-remove  :test 'equalp))
@@ -301,10 +305,10 @@ PRIMITIVE-DEF are bound to the same values as before."
 OLD-ACTION-NAMES in their subtasks replaced by references to NEW-COMPLEX-TASKS."
   (let ((new-methods (copy-tree methods))
         (new-complex-task-names (mapcar #'hddl-utils:task-name new-complex-tasks)))
-    (iter (for new-method in new-methods)
-      (as subtasks = (copy-tree (hddl-utils:method-subtasks new-method)))
-      (iter (for old-action-name in old-action-names)
-        (as new-task-name in new-complex-task-names)
-        (setf subtasks (subst new-task-name old-action-name subtasks)))
-      (setf (hddl-utils:method-subtasks new-method) subtasks))
+    (dolist (new-method new-methods)
+      (let ((subtasks (copy-tree (hddl-utils:method-subtasks new-method))))
+        (iter (for old-action-name in old-action-names)
+          (as new-task-name in new-complex-task-names)
+          (setf subtasks (subst new-task-name old-action-name subtasks)))
+        (setf (hddl-utils:method-subtasks new-method) subtasks)))
     new-methods))

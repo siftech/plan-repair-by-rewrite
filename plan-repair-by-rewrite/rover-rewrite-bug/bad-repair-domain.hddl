@@ -1,0 +1,601 @@
+(define (domain rover-repair)
+ (:requirements :typing)
+ (:types
+   objective waypoint - location
+   camera lander location mode rover store - object)
+ (:constants)
+ (:predicates (at ?x - rover ?y - waypoint)
+  (at_lander ?x - lander ?y - waypoint)
+  (can_traverse ?r - rover ?x - waypoint ?y - waypoint) (empty ?s - store)
+  (full ?s - store) (equipped_for_soil_analysis ?r - rover)
+  (equipped_for_rock_analysis ?r - rover) (equipped_for_imaging ?r - rover)
+  (have_rock_analysis ?r - rover ?w - waypoint)
+  (have_soil_analysis ?r - rover ?w - waypoint)
+  (calibrated ?c - camera ?r - rover) (supports ?c - camera ?m - mode)
+  (available ?r - rover) (visible ?w - waypoint ?p - waypoint)
+  (have_image ?r - rover ?o - objective ?m - mode)
+  (communicated_soil_data ?w - waypoint) (communicated_rock_data ?w - waypoint)
+  (communicated_image_data ?o - objective ?m - mode)
+  (at_soil_sample ?w - waypoint) (at_rock_sample ?w - waypoint)
+  (visible_from ?o - objective ?w - waypoint) (store_of ?s - store ?r - rover)
+  (calibration_target ?i - camera ?o - objective)
+  (on_board ?i - camera ?r - rover) (channel_free ?l - lander)
+  (goal_communicated_soil_data ?w - waypoint)
+  (goal_communicated_rock_data ?w - waypoint)
+  (goal_communicated_image_data ?o - objective ?m - mode) (l-0) (l-1) (l-2)
+  (l-3) (l-4) (l-5) (l-6))
+ (:task communicate-image-data :parameters
+  (?mode - mode ?obj - objective ?rover - rover))
+ (:task calibrate-camera :parameters (?camera - camera ?rover - rover))
+ (:task communicate-image :parameters
+  (?lander-loc ?rover-loc - location ?mode - mode ?obj - objective
+     ?rover - rover))
+ (:task get-line-of-sight :parameters
+  (?photo-loc - location ?obj - objective ?rover - rover))
+ (:task communicate-soil-data :parameters (?goal-loc - location ?rover - rover))
+ (:task move-to :parameters (?to - location ?rover - rover))
+ (:task empty-store :parameters (?r - rover ?s - store))
+ (:task transmit-rock :parameters
+  (?origin ?rover-loc - location ?rover - rover))
+ (:task transmit-soil :parameters
+  (?origin ?rover-loc - location ?rover - rover))
+ (:task transmit-image :parameters
+  (?origin ?rover-loc - location ?rover - rover))
+ (:task communicate-rock-data :parameters (?goal-loc - location ?rover - rover))
+ (:task achieve-goals :parameters ())
+ (:task replay-navigate-1-prime :parameters (?x - rover ?y ?z - waypoint))
+ (:task replay-navigate-2-prime :parameters (?x - rover ?y ?z - waypoint))
+ (:task replay-sample_soil-3-prime :parameters
+  (?x - rover ?s - store ?p - waypoint))
+ (:task replay-communicate_soil_data-4-prime :parameters
+  (?l - lander ?r - rover ?p ?x ?y - waypoint))
+ (:task replay-navigate-5-prime :parameters (?x - rover ?y ?z - waypoint))
+ (:task replay-navigate-6-prime :parameters (?x - rover ?y ?z - waypoint))
+ (:method achieve-communicated-image-data :parameters
+  (?obj - objective ?mode - mode ?rover - rover ?l - lander ?photo-loc
+   ?lander-loc - location ?camera - camera)
+  :task (communicate-image-data ?obj ?mode ?rover) :precondition
+  (and
+    (on_board ?camera ?rover)
+    (supports ?camera ?mode)
+    (at_lander ?l ?lander-loc))
+  :ordered-subtasks
+  (and
+    (calibrate-camera ?rover ?camera)
+    (get-line-of-sight ?rover ?obj ?photo-loc)
+    (take_image ?rover ?photo-loc ?obj ?camera ?mode)
+    (communicate-image ?photo-loc ?lander-loc ?rover ?obj ?mode)))
+ (:method camera-already-calibrated :parameters
+  (?rover - rover ?camera - camera) :task (calibrate-camera ?rover ?camera)
+  :precondition
+  (and
+    (calibrated ?camera ?rover))
+  :ordered-subtasks (and))
+ (:method calibrate-the-camera :parameters
+  (?rover - rover ?camera - camera ?calibration-obj - objective
+   ?calibration-loc - location)
+  :task (calibrate-camera ?rover ?camera) :precondition
+  (and
+    (not (calibrated ?camera ?rover))
+    (calibration_target ?camera ?calibration-obj)
+    (visible_from ?calibration-obj ?calibration-loc))
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?calibration-loc)
+    (calibrate ?rover ?camera ?calibration-obj ?calibration-loc)))
+ (:method communicate-image-meth :parameters
+  (?rover-loc ?lander-loc - location ?rover - rover ?obj - objective ?mode -
+   mode ?l - lander)
+  :task (communicate-image ?rover-loc ?lander-loc ?rover ?obj ?mode)
+  :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (at_lander ?l ?lander-loc)
+    (visible ?rover-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (communicate_image_data ?rover ?l ?obj ?mode ?rover-loc ?lander-loc)))
+ (:method relocate-then-communicate-image :parameters
+  (?rover-loc ?lander-loc ?new-loc - location ?rover - rover ?obj - objective
+   ?mode - mode ?l - lander)
+  :task (communicate-image ?rover-loc ?lander-loc ?rover ?obj ?mode)
+  :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (at_lander ?l ?lander-loc)
+    (not (visible ?rover-loc ?lander-loc))
+    (visible ?new-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?new-loc)
+    (communicate_image_data ?rover ?l ?obj ?mode ?new-loc ?lander-loc)))
+ (:method have-line-of-sight-for-photo :parameters
+  (?rover - rover ?obj - objective ?photo-loc - location) :task
+  (get-line-of-sight ?rover ?obj ?photo-loc) :precondition
+  (and
+    (at ?rover ?photo-loc)
+    (visible_from ?obj ?photo-loc))
+  :ordered-subtasks (and))
+ (:method need-line-of-sight :parameters
+  (?rover - rover ?obj - objective ?rover-loc ?photo-loc - location) :task
+  (get-line-of-sight ?rover ?obj ?photo-loc) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (not (visible_from ?obj ?rover-loc))
+    (visible_from ?obj ?photo-loc))
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?photo-loc)))
+ (:method achieve-communicated-soil-data :parameters
+  (?rover-loc ?goal-loc - location ?rover - rover ?s - store) :task
+  (communicate-soil-data ?goal-loc ?rover) :precondition (store_of ?s ?rover)
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?goal-loc)
+    (empty-store ?s ?rover)
+    (replay-sample_soil-3-prime ?rover ?s ?goal-loc)
+    (transmit-soil ?goal-loc ?rover-loc ?rover)))
+ (:method already-there :parameters (?rover - rover ?to - location) :task
+  (move-to ?rover ?to) :precondition (at ?rover ?to) :ordered-subtasks (and))
+ (:method go-there :parameters (?rover - rover ?to ?from ?one-step - location)
+  :task (move-to ?rover ?to) :precondition
+  (and
+    (not (at ?rover ?to))
+    (at ?rover ?from)
+    (can_traverse ?rover ?from ?one-step))
+  :ordered-subtasks
+  (and
+    (replay-navigate-1-prime ?rover ?from ?one-step)
+    (move-to ?rover ?to)))
+ (:method have-line-of-sight-for-soil :parameters
+  (?analysis-loc ?rover-loc - location ?rover - rover ?lander-loc - location ?l
+   - lander)
+  :task (transmit-soil ?analysis-loc ?rover-loc ?rover) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (at_lander ?l ?lander-loc)
+    (visible ?rover-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    replay-communicate_soil_data-4-prime
+    ?rover
+    ?l
+    ?analysis-loc
+    ?rover-loc
+    ?lander-loc))
+ (:method go-to-line-of-sight-for-soil :parameters
+  (?analysis-loc ?rover-loc ?lander-loc ?new-loc - location ?rover - rover ?l -
+   lander)
+  :task (transmit-soil ?analysis-loc ?rover-loc ?rover) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (at_lander ?l ?lander-loc)
+    (not (visible ?rover-loc ?lander-loc))
+    (visible ?new-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?new-loc)
+    (replay-communicate_soil_data-4-prime ?rover ?l ?analysis-loc ?new-loc
+     ?lander-loc)))
+ (:method have-line-of-sight-for-image :parameters
+  (?analysis-loc ?rover-loc ?lander-loc - location ?rover - rover ?l - lander
+   ?mode - mode)
+  :task (transmit-image ?analysis-loc ?rover-loc ?rover) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (have_image ?rover ?analysis-loc ?mode)
+    (at_lander ?l ?lander-loc)
+    (visible ?rover-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (communicate_image_data ?rover ?l ?analysis-loc ?mode ?rover-loc
+     ?lander-loc)))
+ (:method go-to-line-of-sight-for-image :parameters
+  (?analysis-loc ?rover-loc ?lander-loc ?new-loc - location ?rover - rover ?l -
+   lander ?mode - mode)
+  :task (transmit-image ?analysis-loc ?rover-loc ?rover) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (have_image ?rover ?analysis-loc ?mode)
+    (at_lander ?l ?lander-loc)
+    (not (visible ?rover-loc ?lander-loc))
+    (visible ?new-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?new-loc)
+    (communicate_image_data ?rover ?l ?analysis-loc ?mode ?new-loc
+     ?lander-loc)))
+ (:method already-empty :parameters (?s - store ?r - rover) :task
+  (empty-store ?s ?r) :precondition (empty ?s) :ordered-subtasks (and))
+ (:method drop-to-empty :parameters (?s - store ?rover - rover) :task
+  (empty-store ?s ?rover) :precondition (not (empty ?s)) :ordered-subtasks
+  (and
+    drop
+    ?rover
+    ?s))
+ (:method achieve-communicated-rock-data :parameters
+  (?goal-loc ?rover-loc - location ?rover - rover ?s - store ?l - lander) :task
+  (communicate-rock-data ?goal-loc ?rover) :precondition (store_of ?s ?rover)
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?goal-loc)
+    (empty-store ?s ?rover)
+    (sample_rock ?rover ?s ?goal-loc)
+    (transmit-rock ?goal-loc ?rover-loc ?rover)))
+ (:method have-line-of-sight-for-rock :parameters
+  (?analysis-loc ?rover-loc ?lander-loc - location ?rover - rover ?l - lander)
+  :task (transmit-rock ?analysis-loc ?rover-loc ?rover) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (at_lander ?l ?lander-loc)
+    (visible ?rover-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (communicate_rock_data ?rover ?l ?analysis-loc ?rover-loc ?lander-loc)))
+ (:method go-to-line-of-sight-for-rock :parameters
+  (?lander-loc ?analysis-loc ?rover-loc ?new-loc - location ?rover - rover ?l -
+   lander)
+  :task (transmit-rock ?analysis-loc ?rover-loc ?rover) :precondition
+  (and
+    (at ?rover ?rover-loc)
+    (at_lander ?l ?lander-loc)
+    (not (visible ?rover-loc ?lander-loc))
+    (visible ?new-loc ?lander-loc))
+  :ordered-subtasks
+  (and
+    (move-to ?rover ?new-loc)
+    (communicate_rock_data ?rover ?l ?analysis-loc ?new-loc ?lander-loc)))
+ (:method check-for-all-goals-done :parameters () :task (achieve-goals)
+  :precondition
+  (and
+    (forall (?w - waypoint)
+      (imply
+        (goal_communicated_soil_data ?w)
+        (communicated_soil_data ?w)))
+    (forall (?w - waypoint)
+      (imply
+        (goal_communicated_rock_data ?w)
+        (communicated_rock_data ?w)))
+    (forall (?m - mode ?o - objective)
+      (imply
+        (goal_communicated_image_data ?o ?m)
+        (communicated_image_data ?o ?m))))
+  :ordered-subtasks (and))
+ (:method communicate-one-soil-data :parameters
+  (?goal-loc - location ?r - rover) :task (achieve-goals) :precondition
+  (and
+    (goal_communicated_soil_data ?goal-loc)
+    (not (communicated_soil_data ?goal-loc)))
+  :ordered-subtasks
+  (and
+    (communicate-soil-data ?goal-loc ?r)
+    (achieve-goals)))
+ (:method communicate-one-rock-data :parameters
+  (?goal-loc - location ?r - rover) :task (achieve-goals) :precondition
+  (and
+    (goal_communicated_rock_data ?goal-loc)
+    (not (communicated_rock_data ?goal-loc)))
+  :ordered-subtasks
+  (and
+    (communicate-rock-data ?goal-loc ?r)
+    (achieve-goals)))
+ (:method communicate-one-image-data :parameters
+  (?obj - objective ?mode - mode ?r - rover) :task (achieve-goals)
+  :precondition
+  (and
+    (goal_communicated_image_data ?obj ?mode)
+    (not (communicated_image_data ?obj ?mode)))
+  :ordered-subtasks
+  (and
+    (communicate-image-data ?obj ?mode ?r)
+    (achieve-goals)))
+ (:method navigate-1-prime59 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-1-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate-1-prime ?x ?y ?z)))
+ (:method navigate-1-prime60 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-1-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate ?x ?y ?z)))
+ (:method navigate-2-prime61 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-2-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate-2-prime ?x ?y ?z)))
+ (:method navigate-2-prime62 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-2-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate ?x ?y ?z)))
+ (:method sample_soil-3-prime63 :parameters
+  (?x - rover ?s - store ?p - waypoint) :task
+  (replay-sample_soil-3-prime ?x ?s ?p) :precondition () :ordered-subtasks
+  (and
+    (sample_soil-3-prime ?x ?s ?p)))
+ (:method sample_soil-3-prime64 :parameters
+  (?x - rover ?s - store ?p - waypoint) :task
+  (replay-sample_soil-3-prime ?x ?s ?p) :precondition () :ordered-subtasks
+  (and
+    (sample_soil ?x ?s ?p)))
+ (:method communicate_soil_data-4-prime65 :parameters
+  (?r - rover ?l - lander ?p - waypoint ?x - waypoint ?y - waypoint) :task
+  (replay-communicate_soil_data-4-prime ?r ?l ?p ?x ?y) :precondition ()
+  :ordered-subtasks
+  (and
+    (communicate_soil_data-4-prime ?r ?l ?p ?x ?y)))
+ (:method communicate_soil_data-4-prime66 :parameters
+  (?r - rover ?l - lander ?p - waypoint ?x - waypoint ?y - waypoint) :task
+  (replay-communicate_soil_data-4-prime ?r ?l ?p ?x ?y) :precondition ()
+  :ordered-subtasks
+  (and
+    (communicate_soil_data ?r ?l ?p ?x ?y)))
+ (:method navigate-5-prime67 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-5-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate-5-prime ?x ?y ?z)))
+ (:method navigate-5-prime68 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-5-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate ?x ?y ?z)))
+ (:method navigate-6-prime69 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-6-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate-6-prime ?x ?y ?z)))
+ (:method navigate-6-prime70 :parameters
+  (?x - rover ?y - waypoint ?z - waypoint) :task
+  (replay-navigate-6-prime ?x ?y ?z) :precondition () :ordered-subtasks
+  (and
+    (navigate ?x ?y ?z)))
+ (:action navigate :parameters (?x - rover ?y - waypoint ?z - waypoint)
+  :precondition
+  (and
+    (and
+      (can_traverse ?x ?y ?z)
+      (available ?x)
+      (at ?x ?y)
+      (visible ?y ?z))
+    (l-6))
+  :effect
+  (and
+    (not (at ?x ?y))
+    (at ?x ?z)))
+ (:action sample_soil :parameters (?x - rover ?s - store ?p - waypoint)
+  :precondition
+  (and
+    (and
+      (at ?x ?p)
+      (at_soil_sample ?p)
+      (equipped_for_soil_analysis ?x)
+      (store_of ?s ?x)
+      (empty ?s))
+    (l-6))
+  :effect
+  (and
+    (not (empty ?s))
+    (full ?s)
+    (have_soil_analysis ?x ?p)
+    (not (at_soil_sample ?p))))
+ (:action sample_rock :parameters (?x - rover ?s - store ?p - waypoint)
+  :precondition
+  (and
+    (and
+      (at ?x ?p)
+      (at_rock_sample ?p)
+      (equipped_for_rock_analysis ?x)
+      (store_of ?s ?x)
+      (empty ?s))
+    (l-6))
+  :effect
+  (and
+    (not (empty ?s))
+    (full ?s)
+    (have_rock_analysis ?x ?p)
+    (not (at_rock_sample ?p))))
+ (:action drop :parameters (?x - rover ?y - store) :precondition
+  (and
+    (and
+      (store_of ?y ?x)
+      (full ?y))
+    (l-6))
+  :effect
+  (and
+    (not (full ?y))
+    (empty ?y)))
+ (:action calibrate :parameters
+  (?r - rover ?i - camera ?t - objective ?w - waypoint) :precondition
+  (and
+    (and
+      (equipped_for_imaging ?r)
+      (calibration_target ?i ?t)
+      (at ?r ?w)
+      (visible_from ?t ?w)
+      (on_board ?i ?r))
+    (l-6))
+  :effect (calibrated ?i ?r))
+ (:action take_image :parameters
+  (?r - rover ?p - waypoint ?o - objective ?i - camera ?m - mode) :precondition
+  (and
+    (and
+      (calibrated ?i ?r)
+      (on_board ?i ?r)
+      (equipped_for_imaging ?r)
+      (supports ?i ?m)
+      (visible_from ?o ?p)
+      (at ?r ?p))
+    (l-6))
+  :effect
+  (and
+    (have_image ?r ?o ?m)
+    (not (calibrated ?i ?r))))
+ (:action communicate_soil_data :parameters
+  (?r - rover ?l - lander ?p - waypoint ?x - waypoint ?y - waypoint)
+  :precondition
+  (and
+    (and
+      (at ?r ?x)
+      (at_lander ?l ?y)
+      (have_soil_analysis ?r ?p)
+      (visible ?x ?y)
+      (available ?r)
+      (channel_free ?l))
+    (l-6))
+  :effect
+  (and
+    (communicated_soil_data ?p)))
+ (:action communicate_rock_data :parameters
+  (?r - rover ?l - lander ?p - waypoint ?x - waypoint ?y - waypoint)
+  :precondition
+  (and
+    (and
+      (at ?r ?x)
+      (at_lander ?l ?y)
+      (have_rock_analysis ?r ?p)
+      (visible ?x ?y)
+      (available ?r)
+      (channel_free ?l))
+    (l-6))
+  :effect
+  (and
+    (communicated_rock_data ?p)))
+ (:action communicate_image_data :parameters
+  (?r - rover ?l - lander ?o - objective ?m - mode ?x - waypoint ?y - waypoint)
+  :precondition
+  (and
+    (and
+      (at ?r ?x)
+      (at_lander ?l ?y)
+      (have_image ?r ?o ?m)
+      (visible ?x ?y)
+      (available ?r)
+      (channel_free ?l))
+    (l-6))
+  :effect
+  (and
+    (communicated_image_data ?o ?m)))
+ (:action navigate-1-prime :parameters (?x - rover ?y - waypoint ?z - waypoint)
+  :precondition
+  (and
+    (= ?x rover0)
+    (= ?y waypoint3)
+    (= ?z waypoint1)
+    (and
+      (can_traverse ?x ?y ?z)
+      (available ?x)
+      (at ?x ?y)
+      (visible ?y ?z))
+    (l-0))
+  :effect
+  (and
+    (and
+      (not (at ?x ?y))
+      (at ?x ?z))
+    (not (l-0))
+    (l-1)))
+ (:action navigate-2-prime :parameters (?x - rover ?y - waypoint ?z - waypoint)
+  :precondition
+  (and
+    (= ?x rover0)
+    (= ?y waypoint1)
+    (= ?z waypoint2)
+    (and
+      (can_traverse ?x ?y ?z)
+      (available ?x)
+      (at ?x ?y)
+      (visible ?y ?z))
+    (l-1))
+  :effect
+  (and
+    (and
+      (not (at ?x ?y))
+      (at ?x ?z))
+    (not (l-1))
+    (l-2)))
+ (:action sample_soil-3-prime :parameters (?x - rover ?s - store ?p - waypoint)
+  :precondition
+  (and
+    (= ?x rover0)
+    (= ?s rover0store)
+    (= ?p waypoint2)
+    (and
+      (at ?x ?p)
+      (at_soil_sample ?p)
+      (equipped_for_soil_analysis ?x)
+      (store_of ?s ?x)
+      (empty ?s))
+    (l-2))
+  :effect
+  (and
+    (and
+      (not (empty ?s))
+      (full ?s)
+      (have_soil_analysis ?x ?p)
+      (not (at_soil_sample ?p)))
+    (not (l-2))
+    (l-3)))
+ (:action communicate_soil_data-4-prime :parameters
+  (?r - rover ?l - lander ?p - waypoint ?x - waypoint ?y - waypoint)
+  :precondition
+  (and
+    (= ?r rover0)
+    (= ?l general)
+    (= ?p waypoint2)
+    (= ?x waypoint2)
+    (= ?y waypoint0)
+    (and
+      (at ?r ?x)
+      (at_lander ?l ?y)
+      (have_soil_analysis ?r ?p)
+      (visible ?x ?y)
+      (available ?r)
+      (channel_free ?l))
+    (l-3))
+  :effect
+  (and
+    (and
+      (communicated_soil_data ?p))
+    (not (l-3))
+    (l-4)))
+ (:action navigate-5-prime :parameters (?x - rover ?y - waypoint ?z - waypoint)
+  :precondition
+  (and
+    (= ?x rover0)
+    (= ?y waypoint2)
+    (= ?z waypoint1)
+    (and
+      (can_traverse ?x ?y ?z)
+      (available ?x)
+      (at ?x ?y)
+      (visible ?y ?z))
+    (l-4))
+  :effect
+  (and
+    (and
+      (not (at ?x ?y))
+      (at ?x ?z))
+    (not (l-4))
+    (l-5)))
+ (:action navigate-6-prime :parameters (?x - rover ?y - waypoint ?z - waypoint)
+  :precondition
+  (and
+    (= ?x rover0)
+    (= ?y waypoint1)
+    (= ?z waypoint3)
+    (and
+      (can_traverse ?x ?y ?z)
+      (available ?x)
+      (at ?x ?y)
+      (visible ?y ?z))
+    (l-5))
+  :effect
+  (and
+    (and
+      (not (at ?x ?y))
+      (at ?x ?z))
+    (l-6)
+    (not (l-5))
+    (not (visible waypoint2 waypoint3)))))

@@ -9,15 +9,16 @@
 
 
 (defsystem #:plan-repair-rewrite
-    :description "Implementatino of Hoeller et al.'s algorithm for plan repair by
+    :description "Implementation of Hoeller et al.'s algorithm for plan repair by
 rewriting."
   :author "Robert P. Goldman (SIFT, LLC)"
   :license  "BSD 3-clause"
   :version (:read-file-form "version.lisp-expr")
   :serial t
+    :in-order-to ((test-op (test-op "plan-repair-rewrite/test")))
   :depends-on ("iterate"
                "alexandria"
-               (:version "hddl-utils" "3")
+               (:version "hddl-utils" "3.2.3")
                "shop3/unifier")
   :components ((:file "package")
                (:file "plan-repair-rewrite")))
@@ -59,4 +60,29 @@ rewriting."
                                          (remove-if #'(lambda (x) (typep x (uiop:intern* '#:test-passed '#:fiveam)))
                                              test-results))))))
   :pathname "shop3/"
+  :components ((:file "tests")))
+
+(defsystem #:plan-repair-rewrite/test
+  :author "Robert P. Goldman (SIFT, LLC)"
+  :license  "BSD 3-clause"
+  :version (:read-file-form "version.lisp-expr")
+  :serial t
+  :depends-on ("plan-repair-rewrite" "fiveam")
+  :perform (test-op (op sys)
+                    (let* ((test-results
+                            (uiop:symbol-call :fiveam '#:run
+                                              (uiop:intern* '#:plan-repair-rewrite-tests
+                                                            '#:repair-by-rewrite-tests)))
+                          (result (every #'(lambda (x) (typep x (uiop:intern* '#:test-passed '#:fiveam)))
+                                         test-results)))
+                      (if result
+                          (format t "~&TEST-OP for plan-repair-rewrite passed.~%")
+                          (error "TEST-OP for plan-repair-rewrite failed.~%Failing tests:~%~{~T~A~%~}"
+                                 (mapcar #'(lambda (failure)
+                                             (uiop:symbol-call '#:fiveam '#:name
+                                                               (uiop:symbol-call
+                                                                '#:fiveam '#:test-case
+                                                                failure)))
+                                         (remove-if #'(lambda (x) (typep x (uiop:intern* '#:test-passed '#:fiveam)))
+                                             test-results))))))
   :components ((:file "tests")))
