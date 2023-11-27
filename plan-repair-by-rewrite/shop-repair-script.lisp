@@ -70,21 +70,21 @@
     (shop3:find-plans-stack shop::*problem*)))
 
 (defparameter *shop-rover-plan*
-  'shop-rovers::((!NAVIGATE ROVER0 WAYPOINT3 WAYPOINT1)
-                   (!NAVIGATE ROVER0 WAYPOINT1 WAYPOINT2)
-                   (!SAMPLE_SOIL ROVER0 ROVER0STORE WAYPOINT2)
-                   (!COMMUNICATE_SOIL_DATA ROVER0 GENERAL WAYPOINT2 WAYPOINT2 WAYPOINT0)
-                   (!NAVIGATE ROVER0 WAYPOINT2 WAYPOINT1)
-                   (!NAVIGATE ROVER0 WAYPOINT1 WAYPOINT3)
-                   (!DROP ROVER0 ROVER0STORE)
-                   (!SAMPLE_ROCK ROVER0 ROVER0STORE WAYPOINT3)
-                   (!COMMUNICATE_ROCK_DATA ROVER0 GENERAL WAYPOINT3 WAYPOINT3 WAYPOINT0)
-                   (!NAVIGATE ROVER0 WAYPOINT3 WAYPOINT0)
-                   (!CALIBRATE ROVER0 CAMERA0 OBJECTIVE1 WAYPOINT0)
-                   (!TAKE_IMAGE ROVER0 WAYPOINT0 OBJECTIVE1 CAMERA0 HIGH_RES)
-                   (!NAVIGATE ROVER0 WAYPOINT0 WAYPOINT3)
-                   (!NAVIGATE ROVER0 WAYPOINT3 WAYPOINT1)
-                   (!COMMUNICATE_IMAGE_DATA ROVER0 GENERAL OBJECTIVE1 HIGH_RES WAYPOINT1 WAYPOINT0)))
+  'shop-user::((!NAVIGATE ROVER0 WAYPOINT3 WAYPOINT1)
+               (!NAVIGATE ROVER0 WAYPOINT1 WAYPOINT2)
+               (!SAMPLE_SOIL ROVER0 ROVER0STORE WAYPOINT2)
+               (!COMMUNICATE_SOIL_DATA ROVER0 GENERAL WAYPOINT2 WAYPOINT2 WAYPOINT0)
+               (!NAVIGATE ROVER0 WAYPOINT2 WAYPOINT1)
+               (!NAVIGATE ROVER0 WAYPOINT1 WAYPOINT3)
+               (!DROP ROVER0 ROVER0STORE)
+               (!SAMPLE_ROCK ROVER0 ROVER0STORE WAYPOINT3)
+               (!COMMUNICATE_ROCK_DATA ROVER0 GENERAL WAYPOINT3 WAYPOINT3 WAYPOINT0)
+               (!NAVIGATE ROVER0 WAYPOINT3 WAYPOINT0)
+               (!CALIBRATE ROVER0 CAMERA0 OBJECTIVE1 WAYPOINT0)
+               (!TAKE_IMAGE ROVER0 WAYPOINT0 OBJECTIVE1 CAMERA0 HIGH_RES)
+               (!NAVIGATE ROVER0 WAYPOINT0 WAYPOINT3)
+               (!NAVIGATE ROVER0 WAYPOINT3 WAYPOINT1)
+               (!COMMUNICATE_IMAGE_DATA ROVER0 GENERAL OBJECTIVE1 HIGH_RES WAYPOINT1 WAYPOINT0)))
 
 (defparameter *rovers-dir*
   (uiop:ensure-absolute-pathname
@@ -94,9 +94,9 @@
 (defun setup-rover-input-files ()
   (let ((*default-pathname-defaults* *rovers-dir*))
     (load "domain.lisp")
-    (setf *orig-domain* (shop:find-domain 'shop-rovers::rover))
+    (setf *orig-domain* (shop:find-domain 'shop-user::rover))
     (load "p01.lisp")
-    (setf *orig-problem* (shop::find-problem 'shop-rovers::ROVERPROB01))
+    (setf *orig-problem* (shop::find-problem 'shop-user::ROVERPROB01))
     (setf *orig-plan* (copy-tree *shop-rover-plan*))
     (setf *erecord*
           (make-instance 'execution-record
@@ -104,7 +104,7 @@
                          :problem *orig-problem*
                          :domain *orig-domain*
                          :executed-actions (subseq *orig-plan* 0 6)
-                         :unforeseen-neg 'shop-rovers::((VISIBLE WAYPOINT3 WAYPOINT0))
+                         :unforeseen-neg 'shop-user::((VISIBLE WAYPOINT3 WAYPOINT0))
                          :unforeseen-pos nil))))
 
 
