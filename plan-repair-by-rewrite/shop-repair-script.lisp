@@ -140,3 +140,25 @@
     (load problem-file)
     ;; last problem defined...
     (shop3:find-plans-stack shop::*problem*)))
+
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun asdf-system-loaded-p (system-id)
+    (alexandria:when-let ((system (asdf:find-system system-id nil)))
+      (asdf-action:component-operation-time 'asdf:load-op system)))
+
+  (when (asdf-system-loaded-p "plan-sim")
+    (defun rovers-repair-experiment ()
+      (let* ((output-directory-name
+               (format nil "rovers-test-~d" (get-universal-time)))
+             (output-directory (merge-pathnames
+                                (make-pathname :directory
+                                               (list :relative output-directory-name))
+                                (uiop:temporary-directory))))
+        (ensure-directories-exist output-directory)
+        (format t "~&Writing output files to ~a~%" (namestring output-directory))
+        (plan-sim:run-experiment :rewrite-shop3 'shop-user::rover 'shop-user::ROVERPROB01
+                                 :experiment-folder *rovers-dir* :problem-filename "p01.lisp"
+                                 :timeout-secs (* 5 60)
+                                 :verbose 1
+                                 :output-directory output-directory)))))
