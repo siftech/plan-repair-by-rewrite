@@ -86,7 +86,7 @@
                           :problem problem
                           :plan plan
                           :unforeseen-pos NIL
-                          :unforeseen-neg 'hddl::((visible waypoint2 waypoint3))
+                          :unforeseen-neg '((hddl::visible hddl::waypoint2 hddl::waypoint3))
                           :executed-actions (subseq plan 0 6)))
          (repair-domain (repair-domain-and-problem er))
          (methods (hddl-utils:domain-methods repair-domain))

@@ -1,0 +1,3 @@
+[submodule "ext/pddl-tools"]
+	path = ext/pddl-tools
+	url = https://github.com/rpgoldman/pddl-tools.git
